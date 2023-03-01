@@ -1,5 +1,4 @@
 # Python Chess
-## An issue has been found, please download later!!!
 
 ### Ignore any mention of `C++`, `Makefile` or `C`: Github counts *any* files, including the files used by Stockfish.
 
