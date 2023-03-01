@@ -1,4 +1,7 @@
 # Python Chess
+
+### Ignore any mention of `C++`, `Makefile` or `C`: Github counts *any* files, including the files used by Stockfish.
+
 Chess program in Python including GUI w/ Pygame and AI opponent via Tensorflow
 
 Github will be updated to include the latest version every Thursday
