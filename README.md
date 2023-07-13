@@ -1,5 +1,11 @@
 # PyChess - Chess implementation in Python
 
+
+> This project is still under construction, and many of the features are yet to be implemented, finished, or polished off.
+>
+> Want to report a bug/issue, or want to suggest a feature? Let me know by going to https://github.com/commandcontrolQ/pychess-tf/issues!
+
+
 Chess program in Python (including an AI opponent)
 
 __The repository will be ideally updated as soon as I can__
