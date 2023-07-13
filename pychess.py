@@ -1,40 +1,8 @@
 """
-
- ██████  █████  ██    ██ ████████ ██  ██████  ███    ██                                                                                                          
-██      ██   ██ ██    ██    ██    ██ ██    ██ ████   ██                                                                                                          
-██      ███████ ██    ██    ██    ██ ██    ██ ██ ██  ██                                                                                                          
-██      ██   ██ ██    ██    ██    ██ ██    ██ ██  ██ ██                                                                                                          
- ██████ ██   ██  ██████     ██    ██  ██████  ██   ████                                                                                                          
-                                                                                                                                                                 
-                                                                                                                                                                 
-████████ ██   ██ ██ ███████     ██████  ██████   ██████   ██████  ██████   █████  ███    ███     ██████  ███████  ██████  ██    ██ ██ ██████  ███████ ███████    
-   ██    ██   ██ ██ ██          ██   ██ ██   ██ ██    ██ ██       ██   ██ ██   ██ ████  ████     ██   ██ ██      ██    ██ ██    ██ ██ ██   ██ ██      ██      ██ 
-   ██    ███████ ██ ███████     ██████  ██████  ██    ██ ██   ███ ██████  ███████ ██ ████ ██     ██████  █████   ██    ██ ██    ██ ██ ██████  █████   ███████    
-   ██    ██   ██ ██      ██     ██      ██   ██ ██    ██ ██    ██ ██   ██ ██   ██ ██  ██  ██     ██   ██ ██      ██ ▄▄ ██ ██    ██ ██ ██   ██ ██           ██ ██ 
-   ██    ██   ██ ██ ███████     ██      ██   ██  ██████   ██████  ██   ██ ██   ██ ██      ██     ██   ██ ███████  ██████   ██████  ██ ██   ██ ███████ ███████    
-                                                                                                                     ▀▀                                          
-                                                                                                                                                                 
-          ██████  ██    ██ ████████ ██   ██  ██████  ███    ██     ██████      ██  ██████                                                                        
-          ██   ██  ██  ██     ██    ██   ██ ██    ██ ████   ██          ██    ███ ██  ████                                                                       
-█████     ██████    ████      ██    ███████ ██    ██ ██ ██  ██      █████      ██ ██ ██ ██                                                                       
-          ██         ██       ██    ██   ██ ██    ██ ██  ██ ██          ██     ██ ████  ██                                                                       
-          ██         ██       ██    ██   ██  ██████  ██   ████     ██████  ██  ██  ██████                                                                        
-                                                                                                                                                                 
-                                                                                                                                                                 
-          ██████  ██    ██  ██████   █████  ███    ███ ███████     ███    ███  ██████  ██████  ██    ██ ██      ███████                                          
-          ██   ██  ██  ██  ██       ██   ██ ████  ████ ██          ████  ████ ██    ██ ██   ██ ██    ██ ██      ██                                               
-█████     ██████    ████   ██   ███ ███████ ██ ████ ██ █████       ██ ████ ██ ██    ██ ██   ██ ██    ██ ██      █████                                            
-          ██         ██    ██    ██ ██   ██ ██  ██  ██ ██          ██  ██  ██ ██    ██ ██   ██ ██    ██ ██      ██                                               
-          ██         ██     ██████  ██   ██ ██      ██ ███████     ██      ██  ██████  ██████   ██████  ███████ ███████                                          
-                                                                                                                                                                 
-                                                                                                                                                                 
-           ██████ ██   ██ ███████ ███████ ███████     ███    ███  ██████  ██████  ██    ██ ██      ███████                                                       
-          ██      ██   ██ ██      ██      ██          ████  ████ ██    ██ ██   ██ ██    ██ ██      ██                                                            
-█████     ██      ███████ █████   ███████ ███████     ██ ████ ██ ██    ██ ██   ██ ██    ██ ██      █████                                                         
-          ██      ██   ██ ██           ██      ██     ██  ██  ██ ██    ██ ██   ██ ██    ██ ██      ██                                                            
-           ██████ ██   ██ ███████ ███████ ███████     ██      ██  ██████  ██████   ██████  ███████ ███████                                                       
-                                                                                                                                                                 
-                                                                                                                                                                 
+Program requirements:
+    Python 3.10
+    'pygame' module (pypi.org/project/pygame)
+    'chess' module (pypi.org/project/chess)
 """
 
 
@@ -58,8 +26,18 @@ class GameState:
             ["wp","wp","wp","wp","wp","wp","wp","wp"],
             ["wR","wN","wB","wQ","wK","wB","wN","wR"]
         ]
+        self.functions = {"p": self.getPawnMoves,
+                          "R": self.getRookMoves,
+                          "B": self.getBishopMoves,
+                          "N": self.getKnightMoves,
+                          "Q": self.getQueenMoves,
+                          "K": self.getKingMoves}
         self.whiteMove = True
         self.log = []
+        self.wKlocation = (7, 4)
+        self.bKlocation = (0, 4)
+        self.checkmate = False
+        self.stalemate = False
 
     def makeMove(self, move):
         """Basic move execution (excluding castling, en-passant, and pawn promotion)"""
@@ -67,6 +45,10 @@ class GameState:
         self.board[move.endRow][move.endCol] = move.pieceMoved
         self.log.append(move) # Log the current move so we can undo it later
         self.whiteMove = not self.whiteMove # Switch the turns
+        if move.pieceMoved == "wK": # Update the location of the white king
+            self.wKlocation = (move.endRow, move.endCol)
+        elif move.pieceMoved == "bK": # Update the location of the black king
+            self.bKlocation = (move.endRow, move.endCol)
     
     def undoMove(self):
         """Undo a move."""
@@ -75,31 +57,153 @@ class GameState:
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
             self.whiteMove = not self.whiteMove # Switch the turns back
+            if move.pieceMoved == "wK": # Update the location of the white king
+                self.wKlocation = (move.startRow, move.startCol)
+            elif move.pieceMoved == "bK": # Update the location of the black king
+                self.bKlocation = (move.startRow, move.startCol)
     
     def getVMoves(self):
-        """Get all valid moves, considering checks"""
-        return self.getPMoves() # We will worry about checks later
+        """Get all valid moves, considering checks
+        1. Generate all possible moves
+        2. For each move, make that move
+        3. Generate all opponent's moves
+        4. For each opponent move, see if it attacks the king
+        5. If it does, it is not valid
+        """
+        moves = self.getPMoves()
+        
+        for i in range(len(moves)-1, -1, -1): # Go backwards through the list
+            self.makeMove(moves[i])
+            self.whiteMove = not self.whiteMove 
+            if self.inCheck():
+                moves.remove(moves[i])
+            self.whiteMove = not self.whiteMove
+            self.undoMove()
+        if len(moves) == 0: # Checkmate or stalemate
+            if self.inCheck():
+                self.checkmate = True
+            else:
+                self.stalemate = True
+        else:
+            self.checkmate = False
+            self.stalemate = False
+        
+        return moves
+    
+    def inCheck(self):
+        if self.whiteMove:
+            return self.squareAttacked(self.wKlocation[0], self.wKlocation[1])
+        else:
+            return self.squareAttacked(self.bKlocation[0], self.bKlocation[1])
+    
+    def squareAttacked(self, row, column):
+        self.whiteMove = not self.whiteMove # Switch to opponent's turn
+        opponentMoves = self.getPMoves()
+        self.whiteMove = not self.whiteMove # Switch turns back
+        for move in opponentMoves:
+            if move.endRow == row and move.endCol == column: # Square is under attack
+                return True
+        return False
+        
     
     def getPMoves(self):
         """Get all possible moves, without considering checks"""
-        moves = [Move((6, 4), (4, 4), self.board)]
+        moves = []
         for row in range(len(self.board)): # Number of rows
             for column in range(len(self.board[row])): # Number of columns in a given row
                 piece = (self.board[row][column][0], self.board[row][column][1])
                 if (piece[0] == "w" and self.whiteMove) or (piece[0] == "b" and not self.whiteMove):
-                    match piece[1]:
-                        case "p":
-                            self.getPawnMoves(row, column, moves)
-                        case "R":
-                            self.getRookMoves(row, column, moves)
+                    self.functions[piece[1]](row, column, moves)
         return moves
     
     def getPawnMoves(self, row, column, moves):
-        pass
-    
+        if self.whiteMove: # It is white's turn, look at the white pawns
+            if self.board[row - 1][column] == "--": # Advance pawns by 1 square
+                moves.append(Move((row, column), (row - 1, column), self.board))
+                if row == 6 and self.board[row - 2][column] == "--": # Advance pawns by 2 squares
+                    moves.append(Move((row, column), (row - 2, column), self.board))
+            if column - 1 >= 0: # Captures to the left
+                if self.board[row - 1][column - 1][0] == "b":
+                    moves.append(Move((row, column), (row - 1, column - 1), self.board))
+            if column + 1 <= 7: # Captures to the right
+                if self.board[row - 1][column + 1][0] == "b":
+                    moves.append(Move((row, column), (row - 1, column + 1), self.board))
+        else:
+            if self.board[row + 1][column] == "--": # Advance pawns by 1 square
+                moves.append(Move((row, column), (row + 1, column), self.board))
+                if row == 1 and self.board[row + 2][column] == "--": # Advance pawns by 2 squares
+                    moves.append(Move((row, column), (row + 2, column), self.board))
+            if column - 1 >= 0: # Captures to the left
+                if self.board[row + 1][column - 1][0] == "w":
+                    moves.append(Move((row, column), (row + 1, column - 1), self.board))
+            if column + 1 <= 7: # Captures to the right
+                if self.board[row + 1][column + 1][0] == "w":
+                    moves.append(Move((row, column), (row + 1, column + 1), self.board))
+                
+                
     def getRookMoves(self, row, column, moves):
-        pass 
-
+        directions = ( (-1, 0), (0, -1), (1, 0), (0, 1) )
+        enemyColor = "b" if self.whiteMove else "w"
+        for d in directions:
+            for i in range(1, 8):
+                endRow = row + d[0] * i
+                endCol = column + d[1] * i
+                if 0 <= endRow < 8 and 0 <= endCol < 8: # On board
+                    endPiece = self.board[endRow][endCol]
+                    if endPiece == "--": # Empty space
+                        moves.append(Move((row, column), (endRow, endCol), self.board))
+                    elif endPiece[0] == enemyColor: # Enemy piece
+                        moves.append(Move((row, column), (endRow, endCol), self.board))
+                        break
+                    else: # Friendly piece
+                        break
+                else: # Off the board
+                    break
+                    
+    def getBishopMoves(self, row, column, moves):
+        directions = ( (-1, -1), (-1, 1), (1, -1), (1, 1) )
+        enemyColor = "b" if self.whiteMove else "w"
+        for d in directions:
+            for i in range(1, 8):
+                endRow = row + d[0] * i
+                endCol = column + d[1] * i
+                if 0 <= endRow < 8 and 0 <= endCol < 8: # On board
+                    endPiece = self.board[endRow][endCol]
+                    if endPiece == "--": # Empty space
+                        moves.append(Move((row, column), (endRow, endCol), self.board))
+                    elif endPiece[0] == enemyColor: # Enemy piece
+                        moves.append(Move((row, column), (endRow, endCol), self.board))
+                        break
+                    else: # Friendly piece
+                        break
+                else: # Off the board
+                    break
+                
+    def getKnightMoves(self, row, column, moves):
+        directions = ( (-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1) )
+        friendlyColor = "w" if self.whiteMove else "b"
+        for d in directions:
+            endRow = row + d[0]
+            endCol = column + d[1]
+            if 0 <= endRow < 8 and 0 <= endCol < 8:
+                endPiece = self.board[endRow][endCol]
+                if endPiece[0] != friendlyColor: # Enemy piece or empty square
+                    moves.append(Move((row, column), (endRow, endCol), self.board))
+                    
+    def getQueenMoves(self, row, column, moves):
+        self.getRookMoves(row, column, moves)
+        self.getBishopMoves(row, column, moves)
+        
+    def getKingMoves(self, row, column, moves):
+        kingMoves = ( (-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1) )
+        friendlyColor = "w" if self.whiteMove else "b"
+        for i in range(8):
+            endRow = row + kingMoves[i][0]
+            endCol = column + kingMoves[i][1]
+            if 0 <= endRow < 8 and 0 <= endCol <= 8:
+                endPiece = self.board[endRow][endCol]
+                if endPiece[0] != friendlyColor: # Enemy piece or empty square
+                    moves.append(Move((row, column), (endRow, endCol), self.board))
 
 
 class Move():
@@ -201,8 +305,10 @@ def main():
                     if move in valid:
                         state.makeMove(move)
                         moveMade = True
-                    selected = () # Reset user clicks
-                    clicks = []
+                        selected = () # Reset user clicks
+                        clicks = []
+                    else:
+                        clicks = [selected] 
         
         if moveMade:
             valid = state.getVMoves()
