@@ -1,8 +1,10 @@
 """
+
 Program requirements:
     Python 3.10
     'pygame' module (pypi.org/project/pygame)
     'chess' module (pypi.org/project/chess)
+    
 """
 
 
@@ -38,6 +40,7 @@ class GameState:
         self.bKlocation = (0, 4)
         self.checkmate = False
         self.stalemate = False
+        self.enpassant = () # Coordinates for the square where it is possible
 
     def makeMove(self, move):
         """Basic move execution (excluding castling, en-passant, and pawn promotion)"""
@@ -49,6 +52,17 @@ class GameState:
             self.wKlocation = (move.endRow, move.endCol)
         elif move.pieceMoved == "bK": # Update the location of the black king
             self.bKlocation = (move.endRow, move.endCol)
+
+        if move.isPromotion:
+            self.board[move.endRow][move.endCol] = move.pieceMoved[0] + "Q"
+        
+        if move.isEnPassant:
+            self.board[move.startRow][move.endCol] = "--"
+        
+        if move.pieceMoved[1] == "p" and abs(move.startRow - move.endRow) == 2:
+            self.enpassant = ((move.startRow + move.endRow) // 2, move.startCol)
+        else:
+            self.enpassant = ()
     
     def undoMove(self):
         """Undo a move."""
@@ -61,8 +75,16 @@ class GameState:
                 self.wKlocation = (move.startRow, move.startCol)
             elif move.pieceMoved == "bK": # Update the location of the black king
                 self.bKlocation = (move.startRow, move.startCol)
+            
+            if move.isEnPassant:
+                self.board[move.endRow][move.endCol] = "--"
+                self.board[move.startRow][move.endCol] = move.pieceCaptured
+                self.enpassant = (move.endRow, move.endCol)
+            if move.pieceMoved[1] == "p" and abs(move.startRow - move.endRow) == 2:
+                self.enpassant = ()
     
     def getVMoves(self):
+        tempenpassant = self.enpassant
         """Get all valid moves, considering checks
         1. Generate all possible moves
         2. For each move, make that move
@@ -88,6 +110,7 @@ class GameState:
             self.checkmate = False
             self.stalemate = False
         
+        self.enpassant = tempenpassant
         return moves
     
     def inCheck(self):
@@ -125,9 +148,13 @@ class GameState:
             if column - 1 >= 0: # Captures to the left
                 if self.board[row - 1][column - 1][0] == "b":
                     moves.append(Move((row, column), (row - 1, column - 1), self.board))
+                elif (row - 1, column - 1) == self.enpassant:
+                    moves.append(Move((row, column), (row - 1, column - 1), self.board, isEnPassant = True))
             if column + 1 <= 7: # Captures to the right
                 if self.board[row - 1][column + 1][0] == "b":
                     moves.append(Move((row, column), (row - 1, column + 1), self.board))
+                elif (row - 1, column + 1) == self.enpassant:
+                    moves.append(Move((row, column), (row - 1, column + 1), self.board, isEnPassant = True))
         else:
             if self.board[row + 1][column] == "--": # Advance pawns by 1 square
                 moves.append(Move((row, column), (row + 1, column), self.board))
@@ -136,9 +163,13 @@ class GameState:
             if column - 1 >= 0: # Captures to the left
                 if self.board[row + 1][column - 1][0] == "w":
                     moves.append(Move((row, column), (row + 1, column - 1), self.board))
+                elif (row + 1, column - 1) == self.enpassant:
+                    moves.append(Move((row, column), (row + 1, column - 1), self.board, isEnPassant = True))
             if column + 1 <= 7: # Captures to the right
                 if self.board[row + 1][column + 1][0] == "w":
                     moves.append(Move((row, column), (row + 1, column + 1), self.board))
+                elif (row + 1, column + 1) == self.enpassant:
+                    moves.append(Move((row, column), (row + 1, column + 1), self.board, isEnPassant = True))
                 
                 
     def getRookMoves(self, row, column, moves):
@@ -213,7 +244,7 @@ class Move():
     filestoCols = {'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5, 'g':6, 'h':7}
     colstoFiles = {v: k for k, v in filestoCols.items()}
     
-    def __init__(self, start, end, board):
+    def __init__(self, start, end, board, isEnPassant = False):
         def getID(*args):
             length = len(args)
             temp = 0
@@ -229,15 +260,26 @@ class Move():
         self.pieceMoved = board[self.startRow][self.startCol]
         self.pieceCaptured = board[self.endRow][self.endCol]
         self.ID = getID(self.startRow, self.startCol, self.endRow, self.endCol)
-    
+        
+        self.isPromotion = False
+        self.isPromotion = (self.pieceMoved == "wp" and self.endRow == 0) or (self.pieceMoved == "bp" and self.endRow == 7)
+        
+        self.isEnPassant = isEnPassant
+        if self.isEnPassant:
+            self.pieceCaptured = "wp" if self.pieceMoved == "bp" else "bp"
+
     # Override the equals method
     def __eq__(self, other):
         if isinstance(other, Move):
             return self.ID == other.ID
     
-    def getNotation(self):
-        """Convert a starting coordinate and an end coordinate into readable notation."""
-        return self.getRF(self.startRow, self.startCol) + self.getRF(self.endRow, self.endCol)
+    def getEndMove(self):
+        """Convert an end coordinate into readable notation."""
+        return self.getRF(self.endRow, self.endCol)
+    
+    def getStartMove(self):
+        """Convert a start coordinate into readable notation."""
+        return self.getRF(self.startRow, self.startCol)
     
     def getRF(self, row, column):
         """Get the rank and file of a square given its row and column."""
@@ -247,7 +289,7 @@ class Move():
 
 Below this class is the main code. It is responsible for handling user input,
 as well as displaying the current GameState object.
- 
+
 """
  
 import pygame
@@ -301,13 +343,29 @@ def main():
                     clicks.append(selected) # Append the 'clicks' list for both the 1st and 2nd clicks
                 if len(clicks) == 2: # Check if there are two coordinates in the 'clicks' list
                     move = Move(clicks[0], clicks[1], state.board)
-                    print(move.getNotation())
-                    if move in valid:
-                        state.makeMove(move)
-                        moveMade = True
-                        selected = () # Reset user clicks
-                        clicks = []
-                    else:
+                    """
+                    notation = (move.getEndMove()) if (move.pieceMoved[1] == "p") or (move.pieceMoved == "-") else (move.pieceMoved[1] + move.getEndMove())
+                    if move.pieceCaptured != "--":
+                        if move.pieceMoved[1] != "p":
+                            notation = [i for i in notation]
+                            notation.insert(1, "x")
+                        else:
+                            notation = [i for i in notation]
+                            notation.insert(0, move.getStartMove()[0])
+                            notation.insert(1, "x")
+                    if state.inCheck():
+                        notation = [i for i in notation]
+                        notation.append("+")
+                    notation = "".join(notation)
+                    print(notation)
+                    """
+                    for i in range(len(valid)):
+                        if move == valid[i]:
+                            state.makeMove(valid[i])
+                            moveMade = True
+                            selected = () # Reset user clicks
+                            clicks = []
+                    if not moveMade:
                         clicks = [selected] 
         
         if moveMade:
