@@ -7,7 +7,10 @@ __The repository will be ideally updated as soon as I can__
 To download this to your computer, there are two methods:
 > People with `git` installed can use `git clone https://github.com/commandcontrolQ/pychess-tf`.
 > 
-> If you do not have git, you can click on the green 'Code' button and then select `Download ZIP`.
+> If you do not have git, you can click on the green 'Code' button and then select `Download ZIP`,
+> or you can go to https://minhaskamal.github.io/DownGit/#/home and paste the following:
+>
+> `https://github.com/commandcontrolQ/pychess-tf`
 
 ## Troubleshooting
 
