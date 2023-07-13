@@ -1,5 +1,11 @@
 # Changelog
 
+## Build 713 (13th July 2023)
+- Added basic pawn promotion (at the moment, you can only promote to a queen)
+- Added en-passant support
+- Move notation has been changed to try to mimic the PGN format
+  - **This is known to be buggy, and therefore it is commented out by default.**
+
 ## Build 712 (12th July 2023)
 - Added checks
 - Added checkmates
