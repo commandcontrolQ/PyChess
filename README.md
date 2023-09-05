@@ -1,12 +1,9 @@
 # PyChess - Chess implementation in Python
 
-
-> __From July 31st to August 31st, I will not have access to Github, and therefore will not be able to update this repository.
-> Although it may seem like I haven't made any progress, I am still working on PyChess and will continue to work on
-> PyChess until it is complete.__
-
 > This project is still under construction, and many of the features are yet to be implemented, finished, or polished off.
 >
+> While I cannot give a date, I can say that the program will be complete by 2024.
+> 
 > Want to report a bug/issue, or want to suggest a feature? Let me know by going to https://github.com/commandcontrolQ/pychess-tf/issues!
 
 
