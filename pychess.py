@@ -41,6 +41,11 @@ class GameState:
         self.checkmate = False
         self.stalemate = False
         self.enpassant = () # Coordinates for the square where it is possible
+        self.currentCastling = Castling(True, True, True, True)
+        self.castlingLog = [Castling(self.currentCastling.kingside[0],
+                                     self.currentCastling.kingside[1],
+                                     self.currentCastling.queenside[0],
+                                     self.currentCastling.queenside[1])]
 
     def makeMove(self, move):
         """Basic move execution (excluding castling, en-passant, and pawn promotion)"""
@@ -63,6 +68,19 @@ class GameState:
             self.enpassant = ((move.startRow + move.endRow) // 2, move.startCol)
         else:
             self.enpassant = ()
+        
+        if move.isCastle:
+            match (move.endCol - move.startCol):
+                case 2: # kingside/short castling
+                    self.board[move.endRow][move.endCol-1], self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol+1], self.board[move.endRow][move.endCol-1]
+                case _: # queenside/long castling
+                    self.board[move.endRow][move.endCol+1], self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol-2], self.board[move.endRow][move.endCol+1]
+        
+        self.updateCastling(move)
+        self.castlingLog.append(Castling(self.currentCastling.kingside[0],
+                                         self.currentCastling.kingside[1],
+                                         self.currentCastling.queenside[0],
+                                         self.currentCastling.queenside[1]))
     
     def undoMove(self):
         """Undo a move."""
@@ -82,9 +100,46 @@ class GameState:
                 self.enpassant = (move.endRow, move.endCol)
             if move.pieceMoved[1] == "p" and abs(move.startRow - move.endRow) == 2:
                 self.enpassant = ()
+            
+            self.castlingLog.pop()
+            self.currentCastling = self.castlingLog[-1]
+            
+            if move.isCastle:
+                match (move.endCol - move.startCol):
+                    case 2: # kingside/short castling
+                        self.board[move.endRow][move.endCol-1], self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol+1], self.board[move.endRow][move.endCol-1]
+                    case _: # queenside/long castling
+                        self.board[move.endRow][move.endCol+1], self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol-2], self.board[move.endRow][move.endCol+1]
+                
+    
+    def updateCastling(self, move):
+        """Update the castling rights if the given move was a king move or a rook move:
+        If the king or the rook was moved by <colour>,
+        then <colour>'s right to castle should be removed.
+        """
+        match move.pieceMoved:
+            case "wK":
+                self.currentCastling.kingside[0] = False
+                self.currentCastling.queenside[0] = False
+            case "bK":
+                self.currentCastling.kingside[1] = False
+                self.currentCastling.queenside[1] = False
+            case "wR":
+                if move.startRow == 7:
+                    if move.startCol == 0:
+                        self.currentCastling.queenside[0] = False
+                    else:
+                        self.currentCastling.kingside[0] = False
+            case "bR":
+                if move.startRow == 0:
+                    if move.startCol == 0:
+                        self.currentCastling.queenside[1] = False
+                    else:
+                        self.currentCastling.kingside[1] = False
+                
+                
     
     def getVMoves(self):
-        tempenpassant = self.enpassant
         """Get all valid moves, considering checks
         1. Generate all possible moves
         2. For each move, make that move
@@ -92,25 +147,34 @@ class GameState:
         4. For each opponent move, see if it attacks the king
         5. If it does, it is not valid
         """
+        
+        for log in self.castlingLog:
+            print(f"white {log.kingside[0]},{log.queenside[0]} : black {log.kingside[1]},{log.queenside[1]}", end=" + ")
+        print("\n")
+        
+        tempenpassant = self.enpassant
+        tempCastling = Castling(self.currentCastling.kingside[0],
+                                self.currentCastling.kingside[1],
+                                self.currentCastling.queenside[0],
+                                self.currentCastling.queenside[1])
+        
         moves = self.getPMoves()
+        self.getCastlingMoves(self.wKlocation[0], self.wKlocation[1], moves) if self.whiteMove else self.getCastlingMoves(self.bKlocation[0], self.bKlocation[1], moves)
         
         for i in range(len(moves)-1, -1, -1): # Go backwards through the list
             self.makeMove(moves[i])
             self.whiteMove = not self.whiteMove 
-            if self.inCheck():
-                moves.remove(moves[i])
+            moves.remove(moves[i]) if self.inCheck() else None
             self.whiteMove = not self.whiteMove
             self.undoMove()
         if len(moves) == 0: # Checkmate or stalemate
-            if self.inCheck():
-                self.checkmate = True
-            else:
-                self.stalemate = True
+            self.checkmate, self.stalemate = True, False if self.inCheck() else False, True
         else:
-            self.checkmate = False
-            self.stalemate = False
+            self.checkmate, self.stalemate = False, False
+
         
         self.enpassant = tempenpassant
+        self.currentCastling = tempCastling
         return moves
     
     def inCheck(self):
@@ -135,8 +199,7 @@ class GameState:
         for row in range(len(self.board)): # Number of rows
             for column in range(len(self.board[row])): # Number of columns in a given row
                 piece = (self.board[row][column][0], self.board[row][column][1])
-                if (piece[0] == "w" and self.whiteMove) or (piece[0] == "b" and not self.whiteMove):
-                    self.functions[piece[1]](row, column, moves)
+                self.functions[piece[1]](row, column, moves) if (piece[0] == "w" and self.whiteMove) or (piece[0] == "b" and not self.whiteMove) else None
         return moves
     
     def getPawnMoves(self, row, column, moves):
@@ -235,7 +298,46 @@ class GameState:
                 endPiece = self.board[endRow][endCol]
                 if endPiece[0] != friendlyColor: # Enemy piece or empty square
                     moves.append(Move((row, column), (endRow, endCol), self.board))
-
+    
+    def getCastlingMoves(self, row, column, moves):
+        """Generate valid castling moves for the king at (row, column)
+        There are two additional rules for castling (excluding the rules that the king and the rook must not have moved):
+        1. The king must not be in check
+        2. The king cannot pass through spaces under attack
+        """
+        
+        if self.inCheck():
+            return
+        if (self.whiteMove and self.currentCastling.kingside[0]) or (not self.whiteMove and self.currentCastling.kingside[1]):
+            self.castleShort(row, column, moves)
+        if (self.whiteMove and self.currentCastling.queenside[0]) or (not self.whiteMove and self.currentCastling.queenside[1]):
+            self.castleLong(row, column, moves)
+        
+    def castleShort(self, row, column, moves):
+        """Kingside castling, use alongside GameState.getCastlingMoves()"""
+        if self.board[row][column + 1] == self.board[row][column + 2] == "--":
+            if not (self.squareAttacked(row, column + 1) or self.squareAttacked(row, column + 2)):
+                moves.append(Move( (row, column), (row, column + 2), self.board, isCastle=True ))
+    def castleLong(self, row, column, moves):
+        """Queenside castling, use alongside GameState.getCastlingMoves()"""
+        if self.board[row][column - 1] == self.board[row][column - 2] == self.board[row][column - 3] == "--":
+            if not (self.squareAttacked(row, column - 1) or self.squareAttacked(row, column - 2)):
+                moves.append(Move( (row, column), (row, column - 2), self.board, isCastle=True ))
+    
+        
+class Castling():
+    def __init__(self, shortW, shortB, longW, longB):
+        """
+        The terms 'short' and 'long' refer to the types of castling:
+        Short castling is another way of referring to kingside castling,
+        Long castling is another way of referring to queenside castling.
+        
+        self.kingside and self.queenside are set up as a tuple to reduce lines.
+        The first item in both tuples are white's rights, and the second item is black's rights
+        """
+        self.kingside = [shortW, shortB]
+        self.queenside = [longW, longB]
+        
 
 class Move():
     # Converting ranks to rows, files to columns, and vice versa
@@ -244,7 +346,7 @@ class Move():
     filestoCols = {'a':0, 'b':1, 'c':2, 'd':3, 'e':4, 'f':5, 'g':6, 'h':7}
     colstoFiles = {v: k for k, v in filestoCols.items()}
     
-    def __init__(self, start, end, board, isEnPassant = False):
+    def __init__(self, start, end, board, isEnPassant = False, isCastle = False):
         def getID(*args):
             length = len(args)
             temp = 0
@@ -267,6 +369,7 @@ class Move():
         self.isEnPassant = isEnPassant
         if self.isEnPassant:
             self.pieceCaptured = "wp" if self.pieceMoved == "bp" else "bp"
+        self.isCastle = isCastle
 
     # Override the equals method
     def __eq__(self, other):
