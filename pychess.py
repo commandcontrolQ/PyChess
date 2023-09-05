@@ -148,9 +148,9 @@ class GameState:
         5. If it does, it is not valid
         """
         
-        for log in self.castlingLog:
-            print(f"white {log.kingside[0]},{log.queenside[0]} : black {log.kingside[1]},{log.queenside[1]}", end=" + ")
-        print("\n")
+#        for log in self.castlingLog:
+#           print(f"white {log.kingside[0]},{log.queenside[0]} : black {log.kingside[1]},{log.queenside[1]}", end=" + ")
+#        print("\n")
         
         tempenpassant = self.enpassant
         tempCastling = Castling(self.currentCastling.kingside[0],
@@ -306,7 +306,7 @@ class GameState:
         2. The king cannot pass through spaces under attack
         """
         
-        if self.inCheck():
+        if self.squareAttacked(row, column):
             return
         if (self.whiteMove and self.currentCastling.kingside[0]) or (not self.whiteMove and self.currentCastling.kingside[1]):
             self.castleShort(row, column, moves)
