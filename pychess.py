@@ -136,6 +136,19 @@ class GameState:
                         self.currentCastling.queenside[1] = False
                     else:
                         self.currentCastling.kingside[1] = False
+        match move.pieceCaptured:
+            case "wR":
+                if move.endRow == 7:
+                    if move.endCol == 0:
+                        self.currentCastling.queenside[0] = False
+                    elif move.endCol == 7:
+                        self.currentCastling.kingside[0] = False
+            case "bR":
+                if move.endRow == 0:
+                    if move.endCol == 0:
+                        self.currentCastling.queenside[1] = False
+                    elif move.endCol == 7:
+                        self.currentCastling.kingside[1] = False
                 
                 
     
@@ -168,7 +181,7 @@ class GameState:
             self.whiteMove = not self.whiteMove
             self.undoMove()
         if len(moves) == 0: # Checkmate or stalemate
-            self.checkmate, self.stalemate = True, False if self.inCheck() else False, True
+            self.checkmate, self.stalemate = (True, False) if self.inCheck() else (False, True)
         else:
             self.checkmate, self.stalemate = False, False
 
@@ -396,6 +409,7 @@ as well as displaying the current GameState object.
 """
  
 import pygame
+from time import sleep
 # from chess import ChessEngine
  
 WIDTH, HEIGHT = 512, 512
@@ -420,7 +434,9 @@ def main():
     screen.fill(pygame.Color("white"))
     state = GameState()
     valid = state.getVMoves()
+    anim = False # Flag this variable when you want to animate a move
     moveMade = False # Flag this variable when a valid move is made
+    gameOver = False # Flag this variable when the game is over
     loadImages() # This loads all of the images, which should only be done once
     selected = () # Initially, no square is selected. This should keep track of the user's last clicked square as a tuple (row, column)
     clicks = [] # This should keep track of the player's current clicks as two tuples in a list [(start_row, start_column), (end_row, end_column)]
@@ -431,57 +447,107 @@ def main():
             if event.type == pygame.QUIT:
                 done = True
             elif event.type == pygame.KEYDOWN: # Key handler
-                if event.key == pygame.K_z:
+                if event.key == pygame.K_z: # Undo move
                     state.undoMove()
                     moveMade = True
+                    anim = False
+                elif event.key == pygame.K_r: # Reset game
+                    state = GameState()
+                    valid = state.getVMoves()
+                    selected = ()
+                    clicks = []
+                    moveMade = False
+                    anim = False
             elif event.type == pygame.MOUSEBUTTONDOWN: # Mouse handler
-                mousepos = pygame.mouse.get_pos() # Get the location of the mouse in the window, stored as (x, y)
-                column = mousepos[0] // squareSize
-                row = mousepos[1] // squareSize
-                if (row, column) == selected: # Check if the user has clicked the same square twice
-                    selected = () # Clear the last clicked square stored in the tuple.
-                    clicks = [] # Clear the player's current clicks
-                else:
-                    selected = (row, column)
-                    clicks.append(selected) # Append the 'clicks' list for both the 1st and 2nd clicks
-                if len(clicks) == 2: # Check if there are two coordinates in the 'clicks' list
-                    move = Move(clicks[0], clicks[1], state.board)
-                    """
-                    notation = (move.getEndMove()) if (move.pieceMoved[1] == "p") or (move.pieceMoved == "-") else (move.pieceMoved[1] + move.getEndMove())
-                    if move.pieceCaptured != "--":
-                        if move.pieceMoved[1] != "p":
+                if not gameOver:
+                    mousepos = pygame.mouse.get_pos() # Get the location of the mouse in the window, stored as (x, y)
+                    column = mousepos[0] // squareSize
+                    row = mousepos[1] // squareSize
+                    if (row, column) == selected: # Check if the user has clicked the same square twice
+                        selected = () # Clear the last clicked square stored in the tuple.
+                        clicks = [] # Clear the player's current clicks
+                    else:
+                        selected = (row, column)
+                        clicks.append(selected) # Append the 'clicks' list for both the 1st and 2nd clicks
+                    if len(clicks) == 2: # Check if there are two coordinates in the 'clicks' list
+                        move = Move(clicks[0], clicks[1], state.board)
+                        """
+                        notation = (move.getEndMove()) if (move.pieceMoved[1] == "p") or (move.pieceMoved == "-") else (move.pieceMoved[1] + move.getEndMove())
+                        if move.pieceCaptured != "--":
+                            if move.pieceMoved[1] != "p":
+                                notation = [i for i in notation]
+                                notation.insert(1, "x")
+                            else:
+                                notation = [i for i in notation]
+                                notation.insert(0, move.getStartMove()[0])
+                                notation.insert(1, "x")
+                        if state.inCheck():
                             notation = [i for i in notation]
-                            notation.insert(1, "x")
-                        else:
-                            notation = [i for i in notation]
-                            notation.insert(0, move.getStartMove()[0])
-                            notation.insert(1, "x")
-                    if state.inCheck():
-                        notation = [i for i in notation]
-                        notation.append("+")
-                    notation = "".join(notation)
-                    print(notation)
-                    """
-                    for i in range(len(valid)):
-                        if move == valid[i]:
-                            state.makeMove(valid[i])
-                            moveMade = True
-                            selected = () # Reset user clicks
-                            clicks = []
-                    if not moveMade:
-                        clicks = [selected] 
+                            notation.append("+")
+                        notation = "".join(notation)
+                        print(notation)
+                        """
+                        for i in range(len(valid)):
+                            if move == valid[i]:
+                                state.makeMove(valid[i])
+                                anim = True
+                                moveMade = True
+                                selected = () # Reset user clicks
+                                clicks = []
+                        if not moveMade:
+                            clicks = [selected] 
         
         if moveMade:
+            if anim:
+                animate(screen, state.log[-1], state.board, clock)
             valid = state.getVMoves()
             moveMade = False
-        drawState(screen, state)
+            anim = False
+            
+        drawState(screen, state, valid, selected)
+        
+        if state.checkmate:
+            gameOver = True
+            done = True
+            if state.whiteMove:
+                drawText("Game finished - Black won by checkmate!", screen)
+            else:
+                drawText("Game finished - White won by checkmate!", screen)
+        elif state.stalemate:
+            gameOver = True
+            done = True
+            drawText("Game finished - Draw by stalemate")
+        
         clock.tick(FPS)
         pygame.display.flip()
 
+def squareHighlight(screen, state, moves, squareSelected):
+    """Move highlighting: Highlight both the piece selected and where it can move.
+
+    Args:
+        screen: pygame window
+        state: the current state of the board
+        moves: list of valid moves
+        square: the square selected
+    """
+    if squareSelected != ():
+        row, column = squareSelected
+        if state.board[row][column][0] == ("w" if state.whiteMove else "b"):
+            SQUARE = pygame.Surface((squareSize, squareSize))
+            SQUARE.set_alpha(100) # Transparency (transparent : 0 -> 255 : opaque)
+            SQUARE.fill(pygame.Color("blue"))
+            screen.blit(SQUARE, (column * squareSize, row * squareSize))
+            SQUARE.fill(pygame.Color("yellow"))
+            for move in moves:
+                if move.startRow == row and move.startCol == column:
+                    screen.blit(SQUARE, (squareSize * move.endCol, squareSize * move.endRow))
+                    
+
 # Draw the current GameState onto the board
 
-def drawState(screen, state):
+def drawState(screen, state, validMoves, selectedSquare):
     drawBoard(screen) # Draw the squares on the board
+    squareHighlight(screen, state, validMoves, selectedSquare)
     drawPieces(screen, state.board) # Draw the pieces on top of those squares
 
 
@@ -489,6 +555,7 @@ def drawBoard(screen):
     """
     Draw the squares on the board.
     """
+    global colors
     colors = [pygame.Color("white"), pygame.Color("gray")]
     for row in range(DIMENSION):
         for column in range(DIMENSION):
@@ -507,17 +574,41 @@ def drawPieces(screen, board):
             if piece != "--": # Piece is not empty!
                 screen.blit(IMAGES[piece], pygame.Rect(column * squareSize, row * squareSize, squareSize, squareSize))
 
+def animate(screen, move, board, clock):
+    """Animate the given move."""
+    global colors
+    rowChange = move.endRow - move.startRow
+    columnChange = move.endCol - move.startCol
+    frames = 6 # frames per square
+    fCount = frames * (abs(rowChange) + abs(columnChange))
+    
+    for f in range(fCount + 1):
+        temp = [rowChange*f/fCount, columnChange*f/fCount]
+        row, column = move.startRow + temp[0], move.startCol + temp[1]
+        drawBoard(screen)
+        drawPieces(screen, board)
+        color = colors[(move.endRow + move.endCol) % 2]
+        finalSquare = pygame.Rect(move.endCol * squareSize, move.endRow * squareSize, squareSize, squareSize)
+        pygame.draw.rect(screen, color, finalSquare)
+        if move.pieceCaptured != "--":
+            screen.blit(IMAGES[move.pieceCaptured], finalSquare)
+        screen.blit(IMAGES[move.pieceMoved], pygame.Rect(column * squareSize, row * squareSize, squareSize, squareSize))
+        
+        pygame.display.flip()
+        clock.tick(60)
 
+def drawText(text, screen):
+    FONT = pygame.font.SysFont("Arial", 28, True, False)
+    textObj = FONT.render(text, 0, pygame.Color("red"))
+    textLoc = pygame.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH/2 - textObj.get_width()/2, HEIGHT/2 - textObj.get_height()/2)
+    screen.blit(textObj, textLoc)
 
 if __name__ == "__main__":
     main()
+    sleep(9)
 
-
-
-
-
-
-
-
-
-
+"""
+A portion of this code was derived from Eddie Sharick, Teacher of Computer Science and Physics
+His YouTube channel is linked below:
+https://www.youtube.com/@eddiesharick6649
+"""
