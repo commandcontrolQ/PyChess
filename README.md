@@ -2,7 +2,7 @@
 
 > This project is still under construction, and many of the features are yet to be implemented, finished, or polished off.
 >
-> While I cannot give a date, I can say that the program will be complete by 2024.
+> While I cannot give a date, I can say that the program will be complete by around December 2023.
 > 
 > Want to report a bug/issue, or want to suggest a feature? Let me know by going to https://github.com/commandcontrolQ/pychess-tf/issues!
 
