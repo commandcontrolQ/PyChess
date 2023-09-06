@@ -1,5 +1,14 @@
 # Changelog
 
+## Build 609 (6th September 2023)
+- Added move highlighting
+- Added animations for when moves are made
+- Added reset function (press 'r')
+- Fixed bug with castling where the king could castle with a non-existent rook as long as that rook never moved
+- Added messages that pop up when the game ends
+  - Fixed a bug where the user could still press 'z' or 'r' after the game ended.
+  - **The previous issue from last build has persisted. While I don't recommend using the undo function, it will not be commented out.**
+
 ## Build 825 (25th August 2023)
 - Added support for castling
   - **There is currently an issue where it is not possible to redo a castle. This is being worked on.**
