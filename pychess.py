@@ -3,10 +3,75 @@
 Program requirements:
     Python 3.10
     'pygame' module (pypi.org/project/pygame)
-    'chess' module (pypi.org/project/chess)
     
 """
 
+"""
+
+MoveFinder:
+This section of the code is responsible for generating the moves used by the computer-controlled pieces.
+"""
+
+import random, pygame
+from copy import deepcopy
+from time import sleep
+
+pieceScore = {"K":100, "Q":10, "R":5, "B":3, "N":3, "p":1}
+CHECKMATE = 1000
+STALEMATE = 0
+
+
+def Get_randomMove(validMoves):
+    return validMoves[random.randint(0, len(validMoves)-1)]
+
+def Get_bestMove(state, validMoves):
+    TEMP_CASTLING = deepcopy(state.currentCastling)
+    
+    turnMulti = 1 if state.whiteMove else -1
+    bestPlayerMove = None
+    opponentMinMaxScore = CHECKMATE
+    random.shuffle(validMoves)
+    for playerMove in validMoves:
+        state.makeMove(playerMove)
+        opponentMoves = state.getVMoves()
+        opponentMaxScore = -CHECKMATE
+        for opponentMove in opponentMoves:
+            state.makeMove(opponentMove)
+            if state.checkmate:
+                score = -turnMulti * CHECKMATE
+            elif state.stalemate:
+                score = STALEMATE
+            else:
+                score = -turnMulti * Get_boardScore(state.board)
+            if score > opponentMaxScore:
+                opponentMaxScore = score
+            state.undoMove()
+        
+        if opponentMinMaxScore > opponentMaxScore:
+            opponentMinMaxScore = opponentMaxScore
+            bestPlayerMove = playerMove
+        
+        state.undoMove()
+    state.currentCastling = TEMP_CASTLING
+    return bestPlayerMove
+
+def Get_pieceScore():
+    pass
+
+def Get_boardScore(board):
+    """Generate a score given the current GameState.
+    Similar to evaluation number seen in other chess programs like lichess.org or chess.com
+    """
+    SCORE = 0
+    for row in board:
+        for square in row:
+            match square[0]:
+                case "w":
+                    SCORE += pieceScore[square[1]]
+                case "b":
+                    SCORE -= pieceScore[square[1]]
+    
+    return SCORE
 
 """
 
@@ -126,15 +191,15 @@ class GameState:
                 self.currentCastling.queenside[1] = False
             case "wR":
                 if move.startRow == 7:
-                    if move.startCol == 0:
+                    if move.startRow == 0:
                         self.currentCastling.queenside[0] = False
-                    else:
+                    elif move.startRow == 7:
                         self.currentCastling.kingside[0] = False
             case "bR":
                 if move.startRow == 0:
                     if move.startCol == 0:
                         self.currentCastling.queenside[1] = False
-                    else:
+                    elif move.startCol == 7:
                         self.currentCastling.kingside[1] = False
         match move.pieceCaptured:
             case "wR":
@@ -161,9 +226,10 @@ class GameState:
         5. If it does, it is not valid
         """
         
-#        for log in self.castlingLog:
-#           print(f"white {log.kingside[0]},{log.queenside[0]} : black {log.kingside[1]},{log.queenside[1]}", end=" + ")
-#        print("\n")
+        #for log in self.castlingLog:
+        #   print(f"MOVE {self.castlingLog.index(log)}:: kingside white: {log.kingside[0]}, queenside white: {log.queenside[0]}")
+        #   print(f"MOVE {self.castlingLog.index(log)}:: kingside black: {log.kingside[1]}, queenside black: {log.queenside[1]}")
+        #print("\n")
         
         tempenpassant = self.enpassant
         tempCastling = Castling(self.currentCastling.kingside[0],
@@ -408,10 +474,6 @@ as well as displaying the current GameState object.
 
 """
  
-import pygame
-from time import sleep
-# from chess import ChessEngine
- 
 WIDTH, HEIGHT = 512, 512
 DIMENSION = 8 # Dimension of the chess board
 squareSize = HEIGHT // DIMENSION
@@ -440,9 +502,12 @@ def main():
     loadImages() # This loads all of the images, which should only be done once
     selected = () # Initially, no square is selected. This should keep track of the user's last clicked square as a tuple (row, column)
     clicks = [] # This should keep track of the player's current clicks as two tuples in a list [(start_row, start_column), (end_row, end_column)]
+    whitePlayer = True # If a human is playing white, this variable is set to True. If an AI is playing white, this variable is False
+    blackPlayer = False # If a human is playing black, this variable is set to False. If an AI is playing black, this variable is True
     
     done = False
     while not done:
+        humanTurn = (state.whiteMove and whitePlayer) or (not state.whiteMove and blackPlayer)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
@@ -459,7 +524,7 @@ def main():
                     moveMade = False
                     anim = False
             elif event.type == pygame.MOUSEBUTTONDOWN: # Mouse handler
-                if not gameOver:
+                if not gameOver and humanTurn:
                     mousepos = pygame.mouse.get_pos() # Get the location of the mouse in the window, stored as (x, y)
                     column = mousepos[0] // squareSize
                     row = mousepos[1] // squareSize
@@ -496,6 +561,15 @@ def main():
                                 clicks = []
                         if not moveMade:
                             clicks = [selected] 
+        
+        # AI move finder
+        if not (gameOver or humanTurn):
+            AIMove = Get_bestMove(state, valid)
+            if AIMove is None:
+                AIMove = Get_randomMove(valid)
+            state.makeMove(AIMove)
+            moveMade = True
+            anim = True
         
         if moveMade:
             if anim:
@@ -605,7 +679,7 @@ def drawText(text, screen):
 
 if __name__ == "__main__":
     main()
-    sleep(9)
+    sleep(5)
 
 """
 A portion of this code was derived from Eddie Sharick, Teacher of Computer Science and Physics
