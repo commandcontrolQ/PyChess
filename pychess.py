@@ -443,7 +443,7 @@ class GameState:
         for i in range(8):
             endRow = row + kingMoves[i][0]
             endCol = column + kingMoves[i][1]
-            if (endRow in [0,1,2,3,4,5,6,7]) and (endCol in [0,1,2,3,4,5,6,7]):
+            if 0 <= endRow < 8 and 0 <= endCol < 8:
                 endPiece = self.board[endRow][endCol]
                 if endPiece[0] != friendlyColor: # Enemy piece or empty square
                     moves.append(Move((row, column), (endRow, endCol), self.board))
