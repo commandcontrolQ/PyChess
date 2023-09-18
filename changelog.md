@@ -1,6 +1,10 @@
 # Changelog
 
-## Build 609 (6th September 2023)
+## Build 918 (18th September 2023)
+- Fixed castling issue where castling rights would be lost after the third move when looking for the best AI move.
+  - **This issue was caused by how assignment statements work in Python. A workaround is to use `copy.deepcopy()`.** For more information, see here: https://tinyurl.com/copypython
+
+## Build 906 (6th September 2023)
 - Added move highlighting
 - Added animations for when moves are made
 - Added reset function (press 'r')
