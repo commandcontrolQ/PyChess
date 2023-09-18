@@ -28,7 +28,7 @@
 - Added checkmates
 - Added stalemates
 
-## Build 704 (4th July 2023?)
+## Build 704 (4th July 2023)
 - Initial release
   - Added basic movement for all pieces
   - Added undo function (press 'z')
