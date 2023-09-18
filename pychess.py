@@ -19,12 +19,14 @@ from time import sleep
 pieceScore = {"K":100, "Q":10, "R":5, "B":3, "N":3, "p":1}
 CHECKMATE = 1000
 STALEMATE = 0
+DEPTH = 2
 
 
-def Get_randomMove(validMoves):
+def findRandomMove(validMoves):
     return validMoves[random.randint(0, len(validMoves)-1)]
 
-def Get_bestMove(state, validMoves):
+"""
+def findBestMove(state, validMoves):
     TEMP_CASTLING = deepcopy(state.currentCastling)
     
     turnMulti = 1 if state.whiteMove else -1
@@ -42,7 +44,7 @@ def Get_bestMove(state, validMoves):
             elif state.stalemate:
                 score = STALEMATE
             else:
-                score = -turnMulti * Get_boardScore(state.board)
+                score = -turnMulti * findBoardScore(state)
             if score > opponentMaxScore:
                 opponentMaxScore = score
             state.undoMove()
@@ -54,16 +56,79 @@ def Get_bestMove(state, validMoves):
         state.undoMove()
     state.currentCastling = TEMP_CASTLING
     return bestPlayerMove
+"""
 
-def Get_pieceScore():
-    pass
 
-def Get_boardScore(board):
+def findBestMove(state, valid):
+    TEMP_CASTLING = deepcopy(state.currentCastling)
+    global nextMove
+    nextMove = None
+    random.shuffle(valid)
+    # findMinMaxMove(state, valid, DEPTH, state.whiteMove)
+    findNegaMaxMove(state, valid, DEPTH, 1 if state.whiteMove else -1)
+    state.currentCastling = TEMP_CASTLING
+    return nextMove
+
+def findMinMaxMove(state, valid, depth, whiteMove):
+    global nextMove
+    if not depth:
+        return findBoardScore(state)
+    
+    if whiteMove:
+        maxScore = -CHECKMATE
+        for move in valid:
+            state.makeMove(move)
+            nextMoves = state.getVMoves()
+            score = findMinMaxMove(state, nextMoves, depth - 1, False)
+            if score > maxScore:
+                maxScore = score
+                if depth == DEPTH:
+                    nextMove = move
+            state.undoMove()
+        return maxScore
+    else:
+        minScore = CHECKMATE
+        for move in valid:
+            state.makeMove(move)
+            nextMoves = state.getVMoves()
+            score = findMinMaxMove(state, nextMoves, depth - 1, True)
+            if score < minScore:
+                minScore = score
+                if depth == DEPTH:
+                    nextMove = move
+            state.undoMove()
+        return minScore
+
+def findNegaMaxMove(state, valid, depth, turnMulti):
+    global nextMove
+    if not depth:
+        return turnMulti * findBoardScore(state)
+    
+    maxScore = -CHECKMATE
+    for move in valid:
+        state.makeMove(move)
+        nextMoves = state.getVMoves()
+        score = -findNegaMaxMove(state, nextMoves, depth - 1, -turnMulti)
+        if score > maxScore:
+            maxScore = score
+            if depth == DEPTH:
+                nextMove = move
+        state.undoMove()
+    return maxScore
+  
+def findBoardScore(state):
     """Generate a score given the current GameState.
     Similar to evaluation number seen in other chess programs like lichess.org or chess.com
     """
+    if state.checkmate:
+        if state.whiteMove:
+            return -CHECKMATE # Black wins
+        else:
+            return CHECKMATE # White wins
+    elif state.stalemate:
+        return STALEMATE
     SCORE = 0
-    for row in board:
+    for row in state.board:
         for square in row:
             match square[0]:
                 case "w":
@@ -238,12 +303,16 @@ class GameState:
                                 self.currentCastling.queenside[1])
         
         moves = self.getPMoves()
-        self.getCastlingMoves(self.wKlocation[0], self.wKlocation[1], moves) if self.whiteMove else self.getCastlingMoves(self.bKlocation[0], self.bKlocation[1], moves)
+        if self.whiteMove:
+            self.getCastlingMoves(self.wKlocation[0], self.wKlocation[1], moves)
+        else:
+            self.getCastlingMoves(self.bKlocation[0], self.bKlocation[1], moves)
         
         for i in range(len(moves)-1, -1, -1): # Go backwards through the list
             self.makeMove(moves[i])
-            self.whiteMove = not self.whiteMove 
-            moves.remove(moves[i]) if self.inCheck() else None
+            self.whiteMove = not self.whiteMove
+            if self.inCheck():
+                moves.remove(moves[i])
             self.whiteMove = not self.whiteMove
             self.undoMove()
         if len(moves) == 0: # Checkmate or stalemate
@@ -278,7 +347,8 @@ class GameState:
         for row in range(len(self.board)): # Number of rows
             for column in range(len(self.board[row])): # Number of columns in a given row
                 piece = (self.board[row][column][0], self.board[row][column][1])
-                self.functions[piece[1]](row, column, moves) if (piece[0] == "w" and self.whiteMove) or (piece[0] == "b" and not self.whiteMove) else None
+                if (piece[0] == "w" and self.whiteMove) or (piece[0] == "b" and not self.whiteMove):
+                    self.functions[piece[1]](row, column, moves)
         return moves
     
     def getPawnMoves(self, row, column, moves):
@@ -373,7 +443,7 @@ class GameState:
         for i in range(8):
             endRow = row + kingMoves[i][0]
             endCol = column + kingMoves[i][1]
-            if 0 <= endRow < 8 and 0 <= endCol <= 8:
+            if (endRow in [0,1,2,3,4,5,6,7]) and (endCol in [0,1,2,3,4,5,6,7]):
                 endPiece = self.board[endRow][endCol]
                 if endPiece[0] != friendlyColor: # Enemy piece or empty square
                     moves.append(Move((row, column), (endRow, endCol), self.board))
@@ -564,9 +634,9 @@ def main():
         
         # AI move finder
         if not (gameOver or humanTurn):
-            AIMove = Get_bestMove(state, valid)
+            AIMove = findBestMove(state, valid)
             if AIMove is None:
-                AIMove = Get_randomMove(valid)
+                AIMove = findRandomMove(valid)
             state.makeMove(AIMove)
             moveMade = True
             anim = True
