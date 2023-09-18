@@ -1,5 +1,10 @@
 # Changelog
 
+## Build 918.1 (18th September 2023)
+- Changed the way the AI works to use NegaMax recursion instead of MinMax recursion. **MinMax recursion is still implemented and can be used by uncommenting a line in the `findBestMove()` function.**
+  - The AI does run slower than usual, _although it is not due to the depth_. This will be fixed in a later build.
+- Fixed a critical bug where PyChess would crash after castling due to a bad implementation of the `getKingMoves()` function.
+
 ## Build 918 (18th September 2023)
 - Fixed castling issue where castling rights would be lost after the third move when looking for the best AI move.
   - **This issue was caused by how assignment statements work in Python. A workaround is to use `copy.deepcopy()`.** For more information, see here: https://tinyurl.com/copypython
