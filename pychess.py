@@ -5,6 +5,50 @@ Program requirements:
 """
 
 """
+PlayerChooser:
+This section of the code is responsible for controlling the playerWhite and playerBlack variables,
+which control if the specific side is controlled by a human or the AI.
+
+If a human is playing white, whitePlayer is set to True. If an AI is playing white, whitePlayer is False
+If a human is playing black, blackPlayer is set to True. If an AI is playing black, blackPlayer is False
+"""
+
+import tkinter as tk
+
+PlayerChooser = tk.Tk()
+PlayerChooser.title("Who is playing?")
+PlayerChooser.geometry("500x400")
+
+PlayerChooser_Title0 = tk.Label(PlayerChooser, text="PyChess - Chess implementation in Python", font=("Helvetica",16))
+PlayerChooser_Title0.place(relx=.5, rely=.1, anchor="n")
+PlayerChooser_Title1 = tk.Label(PlayerChooser, text="What would you like to do?", font=("Helvetica",13))
+PlayerChooser_Title1.place(relx=.5, rely=.2, anchor="n")
+
+def setPlayer(choice):
+    global whitePlayer, blackPlayer
+    match choice:
+        case 0:
+            whitePlayer, blackPlayer = True, False
+        case 1:
+            whitePlayer, blackPlayer = False, True
+        case 2:
+            whitePlayer, blackPlayer = True, True
+        case 3:
+            whitePlayer, blackPlayer = False, False
+    PlayerChooser.destroy()
+
+PlayerChooser_Button0 = tk.Button(PlayerChooser, text="Play as white", command=lambda : setPlayer(0))
+PlayerChooser_Button0.place(relx=.5, rely=.4, anchor="center")
+PlayerChooser_Button1 = tk.Button(PlayerChooser, text="Play as black", command=lambda : setPlayer(1))
+PlayerChooser_Button1.place(relx=.5, rely=.5, anchor="center")
+PlayerChooser_Button2 = tk.Button(PlayerChooser, text="Play as both", command=lambda : setPlayer(2))
+PlayerChooser_Button2.place(relx=.5, rely=.6, anchor="center")
+PlayerChooser_Button3 = tk.Button(PlayerChooser, text="Let the AI play itself", command=lambda : setPlayer(3))
+PlayerChooser_Button3.place(relx=.5, rely=.7, anchor="center")
+
+PlayerChooser.mainloop()
+
+"""
 MoveFinder:
 This section of the code is responsible for generating the moves used by the computer-controlled pieces.
 """
@@ -236,6 +280,7 @@ class GameState:
                 self.board[move.endRow][move.endCol] = "--"
                 self.board[move.startRow][move.endCol] = move.pieceCaptured
                 self.enpassant = (move.endRow, move.endCol)
+            
             if move.pieceMoved[1] == "p" and abs(move.startRow - move.endRow) == 2:
                 self.enpassant = ()
             
@@ -481,7 +526,6 @@ class GameState:
             if not (self.squareAttacked(row, column - 1) or self.squareAttacked(row, column - 2)):
                 moves.append(Move( (row, column), (row, column - 2), self.board, isCastle=True ))
     
-        
 class Castling():
     def __init__(self, shortW, shortB, longW, longB):
         """
@@ -495,7 +539,6 @@ class Castling():
         self.kingside = [shortW, shortB]
         self.queenside = [longW, longB]
         
-
 class Move():
     # Converting ranks to rows, files to columns, and vice versa
     rankstoRows = {'1':7, '2':6, '3':5, '4':4, '5':3, '6':2, '7':1, '8':0}
@@ -519,6 +562,7 @@ class Move():
         self.pieceMoved = board[self.startRow][self.startCol]
         self.pieceCaptured = board[self.endRow][self.endCol]
         self.ID = getID(self.startRow, self.startCol, self.endRow, self.endCol)
+        self.isCapture = self.pieceCaptured != "--"
         
         self.isPromotion = False
         self.isPromotion = (self.pieceMoved == "wp" and self.endRow == 0) or (self.pieceMoved == "bp" and self.endRow == 7)
@@ -532,6 +576,35 @@ class Move():
     def __eq__(self, other):
         if isinstance(other, Move):
             return self.ID == other.ID
+    
+    # Override the str method
+    def __str__(self):
+        if self.isCastle: 
+            return "O-O" if self.endCol == 6 else "O-O-O"
+        
+        endSquare = self.getRF(self.endRow, self.endCol)
+        
+        if self.pieceMoved[1] == "p":
+            if self.isCapture:
+                return self.colstoFiles[self.startCol] + "x" + endSquare
+            else:
+                return endSquare
+        
+            # pawn promotions
+            
+        # Two of the same piece type moving to a square
+        
+        # Checks (+) and checkmates (#)
+        
+        # Piece moves
+        moveString = self.pieceMoved[1]
+        if self.isCapture:
+            moveString += "x"
+        return moveString + endSquare
+    
+    def getNotation(self):
+        # Make this look like real notation later
+        return self.getRF(self.startRow, self.startCol) + self.getRF(self.endRow, self.endCol)
     
     def getEndMove(self):
         """Convert an end coordinate into readable notation."""
@@ -551,10 +624,11 @@ Below this class is the main code. It is responsible for handling user input,
 as well as displaying the current GameState object.
 
 """
- 
-WIDTH, HEIGHT = 512, 512
+
+BWIDTH, BHEIGHT = 512, 512
+LOGWIDTH, LOGHEIGHT = 250, BHEIGHT
 DIMENSION = 8 # Dimension of the chess board
-squareSize = HEIGHT // DIMENSION
+squareSize = BHEIGHT // DIMENSION
 FPS = 15
 IMAGES = {} # Blank dictionary to store images
 
@@ -569,9 +643,12 @@ def loadImages():
 
 def main():
     pygame.init() # Initialize pygame
-    screen = pygame.display.set_mode((WIDTH, HEIGHT)) # Set the height and width of the pygame window
+    screen = pygame.display.set_mode((BWIDTH + LOGWIDTH, BHEIGHT)) # Set the BHEIGHT and BWIDTH of the pygame window
+    
     clock = pygame.time.Clock()
     screen.fill(pygame.Color("white"))
+    logFont = pygame.font.SysFont("Consolas", 14, False, False)
+    
     state = GameState()
     valid = state.getVMoves()
     
@@ -583,9 +660,6 @@ def main():
     
     selected = () # Initially, no square is selected. This should keep track of the user's last clicked square as a tuple (row, column)
     clicks = [] # This should keep track of the player's current clicks as two tuples in a list [(start_row, start_column), (end_row, end_column)]
-    
-    whitePlayer = True # If a human is playing white, this variable is set to True. If an AI is playing white, this variable is False
-    blackPlayer = False # If a human is playing black, this variable is set to False. If an AI is playing black, this variable is True
     
     done = False
     while not done:
@@ -610,7 +684,7 @@ def main():
                     mousepos = pygame.mouse.get_pos() # Get the location of the mouse in the window, stored as (x, y)
                     column = mousepos[0] // squareSize
                     row = mousepos[1] // squareSize
-                    if (row, column) == selected: # Check if the user has clicked the same square twice
+                    if (row, column) == selected or column >= 8: # Check if the user has clicked the same square twice or user clicked the move log
                         selected = () # Clear the last clicked square stored in the tuple.
                         clicks = [] # Clear the player's current clicks
                     else:
@@ -618,22 +692,6 @@ def main():
                         clicks.append(selected) # Append the 'clicks' list for both the 1st and 2nd clicks
                     if len(clicks) == 2: # Check if there are two coordinates in the 'clicks' list
                         move = Move(clicks[0], clicks[1], state.board)
-                        """
-                        notation = (move.getEndMove()) if (move.pieceMoved[1] == "p") or (move.pieceMoved == "-") else (move.pieceMoved[1] + move.getEndMove())
-                        if move.pieceCaptured != "--":
-                            if move.pieceMoved[1] != "p":
-                                notation = [i for i in notation]
-                                notation.insert(1, "x")
-                            else:
-                                notation = [i for i in notation]
-                                notation.insert(0, move.getStartMove()[0])
-                                notation.insert(1, "x")
-                        if state.inCheck():
-                            notation = [i for i in notation]
-                            notation.append("+")
-                        notation = "".join(notation)
-                        print(notation)
-                        """
                         for i in range(len(valid)):
                             if move == valid[i]:
                                 state.makeMove(valid[i])
@@ -660,19 +718,19 @@ def main():
             moveMade = False
             anim = False
             
-        drawState(screen, state, valid, selected)
+        drawState(screen, state, valid, selected, logFont)
         
         if state.checkmate:
             gameOver = True
             done = True
             if state.whiteMove:
-                drawText("Game finished - Black won by checkmate!", screen)
+                drawEndGameText("Game finished - Black won by checkmate!", screen)
             else:
-                drawText("Game finished - White won by checkmate!", screen)
+                drawEndGameText("Game finished - White won by checkmate!", screen)
         elif state.stalemate:
             gameOver = True
             done = True
-            drawText("Game finished - Draw by stalemate", screen)
+            drawEndGameText("Game finished - Draw by stalemate", screen)
         
         clock.tick(FPS)
         pygame.display.flip()
@@ -698,14 +756,38 @@ def squareHighlight(screen, state, moves, squareSelected):
                 if move.startRow == row and move.startCol == column:
                     screen.blit(SQUARE, (squareSize * move.endCol, squareSize * move.endRow))
                     
-
 # Draw the current GameState onto the board
 
-def drawState(screen, state, validMoves, selectedSquare):
+def drawState(screen, state, validMoves, selectedSquare, logFont):
     drawBoard(screen) # Draw the squares on the board
     squareHighlight(screen, state, validMoves, selectedSquare)
     drawPieces(screen, state.board) # Draw the pieces on top of those squares
+    drawMoveLog(screen, state, logFont)
 
+def drawMoveLog(screen, state, font):
+    logRect = pygame.Rect(BWIDTH, 0, LOGWIDTH, LOGHEIGHT)
+    pygame.draw.rect(screen, pygame.Color("black"), logRect)
+    
+    moveLog = state.log
+    moveTexts = []
+    
+    for i in range(0, len(moveLog), 2):
+        moveString = str(i//2 + 1) + ": " + str(moveLog[i]) + ", "
+        
+        if i+1 < len(moveLog):
+            moveString += str(moveLog[i+1])
+        moveTexts.append(moveString)
+        
+    textY = padding = 5
+    
+    for i in range(len(moveTexts)):
+        text = moveTexts[i]
+        textObject = font.render(text, True, pygame.Color("white"))
+        
+        textLocation = logRect.move(padding, textY)
+        screen.blit(textObject, textLocation)
+        
+        textY += textObject.get_height()
 
 def drawBoard(screen):
     """
@@ -717,8 +799,6 @@ def drawBoard(screen):
         for column in range(DIMENSION):
             color = colors[((row + column) % 2)]
             pygame.draw.rect(screen, color, pygame.Rect(column * squareSize, row * squareSize, squareSize, squareSize))
-
-
 
 def drawPieces(screen, board):
     """
@@ -747,21 +827,25 @@ def animate(screen, move, board, clock):
         finalSquare = pygame.Rect(move.endCol * squareSize, move.endRow * squareSize, squareSize, squareSize)
         pygame.draw.rect(screen, color, finalSquare)
         if move.pieceCaptured != "--":
+            if move.isEnPassant:
+                enpassantRow = move.endRow + 1 if move.pieceCaptured[0] == "b" else move.endRow - 1
+                finalSquare = pygame.Rect(move.endCol * squareSize, enpassantRow * squareSize, squareSize, squareSize)
             screen.blit(IMAGES[move.pieceCaptured], finalSquare)
         screen.blit(IMAGES[move.pieceMoved], pygame.Rect(column * squareSize, row * squareSize, squareSize, squareSize))
         
         pygame.display.flip()
         clock.tick(60)
 
-def drawText(text, screen):
+def drawEndGameText(text, screen):
     FONT = pygame.font.SysFont("Arial", 24, True, False)
     textObj = FONT.render(text, 0, pygame.Color("red"))
-    textLoc = pygame.Rect(0, 0, WIDTH, HEIGHT).move(WIDTH/2 - textObj.get_width()/2, HEIGHT/2 - textObj.get_height()/2)
+    textLoc = pygame.Rect(0, 0, BWIDTH, BHEIGHT).move(BWIDTH/2 - textObj.get_width()/2, BHEIGHT/2 - textObj.get_height()/2)
     screen.blit(textObj, textLoc)
 
 if __name__ == "__main__":
     main()
-    sleep(5)
+    sleep(6)
+        
 
 """
 A portion of this code was derived from Eddie Sharick, Teacher of Computer Science and Physics
