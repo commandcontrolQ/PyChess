@@ -1,5 +1,13 @@
 # Changelog
 
+## Build 919 (19th September 2023)
+- Implemented Alpha-Beta pruning into the NegaMax recursion function. Performance is slightly improved.
+  - **The depth of the recursion is still kept at 2 moves.**
+- Deprecated multiple functions (they are likely to be removed)
+  - The line in the current `findBestMove()` function referenced in build 918.1 has been removed.
+- Removed the old `findBestMove()` function
+- Removed the ability to undo a move using the 'z' button due to it causing multiple issues.
+
 ## Build 918.1 (18th September 2023)
 - Changed the way the AI works to use NegaMax recursion instead of MinMax recursion. **MinMax recursion is still implemented and can be used by uncommenting a line in the `findBestMove()` function.**
   - The AI does run slower than usual, _although it is not due to the depth_. This will be fixed in a later build.
