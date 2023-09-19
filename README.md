@@ -30,3 +30,5 @@ To install pygame, run the command `pip install pygame`.
 > If that command does not run, try using `py -m pip install pygame`, `python -m pip install pygame`, or `python310 -m pip install pygame`.
 >
 > If you already have installed pygame, then you likely have more than one installation of Python, and they are conflicting. **Make sure that you run the program using the version of Python that pygame was installed onto!**
+
+<img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" alt="" width="88" height="31">
