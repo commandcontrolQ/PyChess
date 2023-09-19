@@ -1,13 +1,10 @@
 """
-
 Program requirements:
     Python 3.10
-    'pygame' module (pypi.org/project/pygame)
-    
+    'pygame' module (pypi.org/project/pygame) 
 """
 
 """
-
 MoveFinder:
 This section of the code is responsible for generating the moves used by the computer-controlled pieces.
 """
@@ -21,54 +18,37 @@ CHECKMATE = 1000
 STALEMATE = 0
 DEPTH = 2
 
+def FLIP(LISTIN):
+    LISTOUT = deepcopy(LISTIN)
+    LISTOUT.reverse()
+    return LISTOUT
 
+def NEGATE(LISTIN):
+    return [-i for i in LISTIN]
+
+
+
+# Random move generator - deprecated
 def findRandomMove(validMoves):
     return validMoves[random.randint(0, len(validMoves)-1)]
 
-"""
-def findBestMove(state, validMoves):
-    TEMP_CASTLING = deepcopy(state.currentCastling)
-    
-    turnMulti = 1 if state.whiteMove else -1
-    bestPlayerMove = None
-    opponentMinMaxScore = CHECKMATE
-    random.shuffle(validMoves)
-    for playerMove in validMoves:
-        state.makeMove(playerMove)
-        opponentMoves = state.getVMoves()
-        opponentMaxScore = -CHECKMATE
-        for opponentMove in opponentMoves:
-            state.makeMove(opponentMove)
-            if state.checkmate:
-                score = -turnMulti * CHECKMATE
-            elif state.stalemate:
-                score = STALEMATE
-            else:
-                score = -turnMulti * findBoardScore(state)
-            if score > opponentMaxScore:
-                opponentMaxScore = score
-            state.undoMove()
-        
-        if opponentMinMaxScore > opponentMaxScore:
-            opponentMinMaxScore = opponentMaxScore
-            bestPlayerMove = playerMove
-        
-        state.undoMove()
-    state.currentCastling = TEMP_CASTLING
-    return bestPlayerMove
-"""
-
-
+# Returns move for the AI opponent
 def findBestMove(state, valid):
+    # Due to how Python handles assignment statements, deep-copying the castling rights
+    # before the next AI move is generated and replacing the castling rights after
+    # the AI move is required due to Python removing the rights by mistake.
+    # For more information see https://tinyurl.com/copypython
+    
     TEMP_CASTLING = deepcopy(state.currentCastling)
     global nextMove
     nextMove = None
+    alphabeta = [-CHECKMATE, CHECKMATE]
     random.shuffle(valid)
-    # findMinMaxMove(state, valid, DEPTH, state.whiteMove)
-    findNegaMaxMove(state, valid, DEPTH, 1 if state.whiteMove else -1)
+    findNMAlphaBetaMove(state, valid, DEPTH, alphabeta, 1 if state.whiteMove else -1)
     state.currentCastling = TEMP_CASTLING
     return nextMove
 
+# MinMax algorithm - deprecated
 def findMinMaxMove(state, valid, depth, whiteMove):
     global nextMove
     if not depth:
@@ -99,6 +79,7 @@ def findMinMaxMove(state, valid, depth, whiteMove):
             state.undoMove()
         return minScore
 
+# NegaMax algorithm wihtout Alpha-Beta pruning - deprecated
 def findNegaMaxMove(state, valid, depth, turnMulti):
     global nextMove
     if not depth:
@@ -115,7 +96,34 @@ def findNegaMaxMove(state, valid, depth, turnMulti):
                 nextMove = move
         state.undoMove()
     return maxScore
-  
+
+# NegaMax algorithm with Alpha-Beta pruning
+def findNMAlphaBetaMove(state, valid, depth, alphabeta, turnMulti):
+    # alphabeta = [alpha, beta]
+    global nextMove
+    if not depth:
+        return turnMulti * findBoardScore(state)
+    
+    # move ordering will come later
+    maxScore = -CHECKMATE
+    for move in valid:
+        state.makeMove(move)
+        nextMoves = state.getVMoves()
+        score = -findNMAlphaBetaMove(state, nextMoves, depth-1, NEGATE(FLIP(alphabeta)), -turnMulti)
+        if score > maxScore:
+            maxScore = score
+            if depth == DEPTH:
+                nextMove = move
+        state.undoMove()
+        
+        # Pruning starts here
+        if maxScore > alphabeta[0]:
+            alphabeta[0] = maxScore
+        if alphabeta[0] >= alphabeta[1]:
+            break
+    return maxScore
+
+
 def findBoardScore(state):
     """Generate a score given the current GameState.
     Similar to evaluation number seen in other chess programs like lichess.org or chess.com
@@ -566,12 +574,16 @@ def main():
     screen.fill(pygame.Color("white"))
     state = GameState()
     valid = state.getVMoves()
+    
     anim = False # Flag this variable when you want to animate a move
     moveMade = False # Flag this variable when a valid move is made
+    
     gameOver = False # Flag this variable when the game is over
     loadImages() # This loads all of the images, which should only be done once
+    
     selected = () # Initially, no square is selected. This should keep track of the user's last clicked square as a tuple (row, column)
     clicks = [] # This should keep track of the player's current clicks as two tuples in a list [(start_row, start_column), (end_row, end_column)]
+    
     whitePlayer = True # If a human is playing white, this variable is set to True. If an AI is playing white, this variable is False
     blackPlayer = False # If a human is playing black, this variable is set to False. If an AI is playing black, this variable is True
     
@@ -582,11 +594,11 @@ def main():
             if event.type == pygame.QUIT:
                 done = True
             elif event.type == pygame.KEYDOWN: # Key handler
-                if event.key == pygame.K_z: # Undo move
-                    state.undoMove()
-                    moveMade = True
-                    anim = False
-                elif event.key == pygame.K_r: # Reset game
+##                if event.key == pygame.K_z: # Undo move
+##                    state.undoMove()
+##                    moveMade = True
+##                    anim = False
+                if event.key == pygame.K_r: # Reset game
                     state = GameState()
                     valid = state.getVMoves()
                     selected = ()
@@ -660,7 +672,7 @@ def main():
         elif state.stalemate:
             gameOver = True
             done = True
-            drawText("Game finished - Draw by stalemate")
+            drawText("Game finished - Draw by stalemate", screen)
         
         clock.tick(FPS)
         pygame.display.flip()
