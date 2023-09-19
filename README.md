@@ -15,7 +15,7 @@ To download this to your computer, there are two methods:
 > People with `git` installed can use `git clone https://github.com/commandcontrolQ/pychess-tf`.
 > 
 > If you do not have git, you can click on the green 'Code' button and then select `Download ZIP`,
-> or you can use this link: https://tinyurl.com/pychessgit
+> or you can use this link: [https://tinyurl.com/pychessgit](https://tinyurl.com/3tzh2567)
 
 ## Troubleshooting
 
