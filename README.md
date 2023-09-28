@@ -1,15 +1,11 @@
 # PyChess - Chess implementation in Python
 
-> This project is still under construction, and many of the features are yet to be implemented, finished, or polished off.
->
-> While I cannot give a date, I can say that the program will be complete by around December 2023.
+> I am taking a break from updating this project.
 > 
-> Want to report a bug/issue, or want to suggest a feature? Let me know by going to https://github.com/commandcontrolQ/pychess-tf/issues!
+> I will probably release a new build sometime after 2023.
 
 
 Chess program in Python (including an AI opponent)
-
-__The repository will be ideally updated as soon as I can__
 
 To download this to your computer, there are two methods:
 > People with `git` installed can use `git clone https://github.com/commandcontrolQ/pychess-tf`.
