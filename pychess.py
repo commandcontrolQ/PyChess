@@ -1,8 +1,14 @@
 """
 Program requirements:
     Python 3.10
-    'pygame' module (pypi.org/project/pygame) 
+    'pygame' module (https://pypi.org/project/pygame/)
 """
+
+import tkinter as tk
+from pygame.mixer import Sound as pySound
+import random, pygame
+from copy import deepcopy
+from time import sleep
 
 """
 PlayerChooser:
@@ -12,50 +18,44 @@ which control if the specific side is controlled by a human or the AI.
 If a human is playing white, whitePlayer is set to True. If an AI is playing white, whitePlayer is False
 If a human is playing black, blackPlayer is set to True. If an AI is playing black, blackPlayer is False
 """
+def choosePlayer():
+    PlayerChooser = tk.Tk()
+    PlayerChooser.title("Who is playing?")
+    PlayerChooser.geometry("500x400")
 
-import tkinter as tk
+    PlayerChooser_Title0 = tk.Label(PlayerChooser, text="PyChess - Chess implementation in Python", font=("Helvetica",16))
+    PlayerChooser_Title0.place(relx=.5, rely=.1, anchor="n")
+    PlayerChooser_Title1 = tk.Label(PlayerChooser, text="What would you like to do?", font=("Helvetica",13))
+    PlayerChooser_Title1.place(relx=.5, rely=.2, anchor="n")
+    
+    def setPlayer(choice):
+        global whitePlayer, blackPlayer
+        match choice:
+            case 0:
+                whitePlayer, blackPlayer = True, False
+            case 1:
+                whitePlayer, blackPlayer = False, True
+            case 2:
+                whitePlayer, blackPlayer = True, True
+            case 3:
+                whitePlayer, blackPlayer = False, False
+        PlayerChooser.destroy()
 
-PlayerChooser = tk.Tk()
-PlayerChooser.title("Who is playing?")
-PlayerChooser.geometry("500x400")
-
-PlayerChooser_Title0 = tk.Label(PlayerChooser, text="PyChess - Chess implementation in Python", font=("Helvetica",16))
-PlayerChooser_Title0.place(relx=.5, rely=.1, anchor="n")
-PlayerChooser_Title1 = tk.Label(PlayerChooser, text="What would you like to do?", font=("Helvetica",13))
-PlayerChooser_Title1.place(relx=.5, rely=.2, anchor="n")
-
-def setPlayer(choice):
-    global whitePlayer, blackPlayer
-    match choice:
-        case 0:
-            whitePlayer, blackPlayer = True, False
-        case 1:
-            whitePlayer, blackPlayer = False, True
-        case 2:
-            whitePlayer, blackPlayer = True, True
-        case 3:
-            whitePlayer, blackPlayer = False, False
-    PlayerChooser.destroy()
-
-PlayerChooser_Button0 = tk.Button(PlayerChooser, text="Play as white", command=lambda : setPlayer(0))
-PlayerChooser_Button0.place(relx=.5, rely=.4, anchor="center")
-PlayerChooser_Button1 = tk.Button(PlayerChooser, text="Play as black", command=lambda : setPlayer(1))
-PlayerChooser_Button1.place(relx=.5, rely=.5, anchor="center")
-PlayerChooser_Button2 = tk.Button(PlayerChooser, text="Play as both", command=lambda : setPlayer(2))
-PlayerChooser_Button2.place(relx=.5, rely=.6, anchor="center")
-PlayerChooser_Button3 = tk.Button(PlayerChooser, text="Let the AI play itself", command=lambda : setPlayer(3))
-PlayerChooser_Button3.place(relx=.5, rely=.7, anchor="center")
-
-PlayerChooser.mainloop()
+    PlayerChooser_Button0 = tk.Button(PlayerChooser, text="Play as white", command=lambda : setPlayer(0))
+    PlayerChooser_Button0.place(relx=.5, rely=.4, anchor="center")
+    PlayerChooser_Button1 = tk.Button(PlayerChooser, text="Play as black", command=lambda : setPlayer(1))
+    PlayerChooser_Button1.place(relx=.5, rely=.5, anchor="center")
+    PlayerChooser_Button2 = tk.Button(PlayerChooser, text="Play as both", command=lambda : setPlayer(2))
+    PlayerChooser_Button2.place(relx=.5, rely=.6, anchor="center")
+    PlayerChooser_Button3 = tk.Button(PlayerChooser, text="Let the AI play itself", command=lambda : setPlayer(3))
+    PlayerChooser_Button3.place(relx=.5, rely=.7, anchor="center")
+    
+    PlayerChooser.mainloop()
 
 """
 MoveFinder:
 This section of the code is responsible for generating the moves used by the computer-controlled pieces.
 """
-
-import random, pygame
-from copy import deepcopy
-from time import sleep
 
 pieceScore = {"K":100, "Q":10, "R":5, "B":3, "N":3, "p":1}
 CHECKMATE = 1000
@@ -218,10 +218,12 @@ class GameState:
                           "K": self.getKingMoves}
         self.whiteMove = True
         self.log = []
+        self.turnsSinceCapture = 0
         self.wKlocation = (7, 4)
         self.bKlocation = (0, 4)
         self.checkmate = False
         self.stalemate = False
+        self.fiftymove = False
         self.enpassant = () # Coordinates for the square where it is possible
         self.currentCastling = Castling(True, True, True, True)
         self.castlingLog = [Castling(self.currentCastling.kingside[0],
@@ -582,7 +584,7 @@ class Move():
         if self.isCastle: 
             return "O-O" if self.endCol == 6 else "O-O-O"
         
-        endSquare = self.getRF(self.endRow, self.endCol)
+        endSquare = self.getEndMove()
         
         if self.pieceMoved[1] == "p":
             if self.isCapture:
@@ -631,6 +633,7 @@ DIMENSION = 8 # Dimension of the chess board
 squareSize = BHEIGHT // DIMENSION
 FPS = 15
 IMAGES = {} # Blank dictionary to store images
+SFX = {}
 
 # Initialize images. This will be called once in the main loop.
 def loadImages():
@@ -639,9 +642,16 @@ def loadImages():
     for p in pieces:
         IMAGES[p] = pygame.transform.scale(pygame.image.load("images/%s.png" % p), (squareSize, squareSize))
 
+# Initialize sounds.
+def loadSounds():
+    """Loads all sounds into a dictionary called 'SFX" to be called when a move is made."""
+    for S in ["capture","castle","check","end","move","start"]:
+        SFX[S] = pySound(fr"sounds\{S}.mp3")
+
 # Main function - handles user input and updating graphics
 
 def main():
+    
     pygame.init() # Initialize pygame
     screen = pygame.display.set_mode((BWIDTH + LOGWIDTH, BHEIGHT)) # Set the BHEIGHT and BWIDTH of the pygame window
     
@@ -654,13 +664,22 @@ def main():
     
     anim = False # Flag this variable when you want to animate a move
     moveMade = False # Flag this variable when a valid move is made
-    
+
+    global gameOver
     gameOver = False # Flag this variable when the game is over
     loadImages() # This loads all of the images, which should only be done once
+    loadSounds() # This loads all of the sound effects, which should only be done once
+    
+    global MANUAL_QUIT, restartGame
+    MANUAL_QUIT = False # Flag this variable when the user clicks the 'X' button to close the program.
+    restartGame = False # Flag this variable when the user wants to play again.
     
     selected = () # Initially, no square is selected. This should keep track of the user's last clicked square as a tuple (row, column)
     clicks = [] # This should keep track of the player's current clicks as two tuples in a list [(start_row, start_column), (end_row, end_column)]
-    
+
+    pySound.play(SFX["start"])
+
+    global done
     done = False
     while not done:
         humanTurn = (state.whiteMove and whitePlayer) or (not state.whiteMove and blackPlayer)
@@ -695,6 +714,15 @@ def main():
                         for i in range(len(valid)):
                             if move == valid[i]:
                                 state.makeMove(valid[i])
+                                if move.isCastle or move.isPromotion:
+                                    pySound.play(SFX["castle"])
+                                    state.turnsSinceCapture += 1
+                                elif move.isCapture or move.isEnPassant:
+                                    pySound.play(SFX["capture"])
+                                    state.turnsSinceCapture = 0
+                                else:
+                                    pySound.play(SFX["move"])
+                                    state.turnsSinceCapture += 1
                                 anim = True
                                 moveMade = True
                                 selected = () # Reset user clicks
@@ -720,20 +748,33 @@ def main():
             
         drawState(screen, state, valid, selected, logFont)
         
+        global RESULT
         if state.checkmate:
             gameOver = True
             done = True
+            pySound.play(SFX["end"])
             if state.whiteMove:
-                drawEndGameText("Game finished - Black won by checkmate!", screen)
+                RESULT = "Black won by checkmate!"
             else:
-                drawEndGameText("Game finished - White won by checkmate!", screen)
+                RESULT = "White won by checkmate!"
         elif state.stalemate:
             gameOver = True
             done = True
-            drawEndGameText("Game finished - Draw by stalemate", screen)
+            pySound.play(SFX["end"])
+            RESULT = "Draw by stalemate..."
+        elif state.turnsSinceCapture >= 50:
+            gameOver = True
+            done = True
+            pySound.play(SFX["end"])
+            RESULT = "Draw by 50-move rule..."
         
         clock.tick(FPS)
         pygame.display.flip()
+    if not gameOver:
+        MANUAL_QUIT = True
+        pygame.quit()
+    else:
+        pass
 
 def squareHighlight(screen, state, moves, squareSelected):
     """Move highlighting: Highlight both the piece selected and where it can move.
@@ -815,11 +856,11 @@ def animate(screen, move, board, clock):
     global colors
     rowChange = move.endRow - move.startRow
     columnChange = move.endCol - move.startCol
-    frames = 6 # frames per square
-    fCount = frames * (abs(rowChange) + abs(columnChange))
+    frames = 5 # frames per square
+    frame_count = frames * (abs(rowChange) + abs(columnChange))
     
-    for f in range(fCount + 1):
-        temp = [rowChange*f/fCount, columnChange*f/fCount]
+    for f in range(frame_count + 1):
+        temp = [rowChange*f/frame_count, columnChange*f/frame_count]
         row, column = move.startRow + temp[0], move.startCol + temp[1]
         drawBoard(screen)
         drawPieces(screen, board)
@@ -836,6 +877,31 @@ def animate(screen, move, board, clock):
         pygame.display.flip()
         clock.tick(60)
 
+def playAgain(result):
+    window = tk.Tk()
+    window.title("Play again?")
+    window.geometry("250x200")
+    
+    label0 = tk.Label(window, text=result, font=("Helvetica",12))
+    label0.place(relx=.5, rely=.2, anchor="n")
+    label1 = tk.Label(window, text="Would you like to play again?", font=("Helvetica",10))
+    label1.place(relx=.5, rely=.4, anchor="n")
+    
+    def setPlayAgain(n, w):
+        global restartGame
+        if n: # User wants to play again
+            restartGame = True
+        elif not n: # User does not want to play again
+            restartGame = False
+        w.destroy()
+    
+    button0 = tk.Button(window, text="Yes", command=lambda : setPlayAgain(1, window))
+    button0.place(relx=.5, rely=.6, anchor="center")
+    button1 = tk.Button(window, text="No", command=lambda : setPlayAgain(0, window))
+    button1.place(relx=.5, rely=.8, anchor="center")
+    
+    window.mainloop()
+
 def drawEndGameText(text, screen):
     FONT = pygame.font.SysFont("Arial", 24, True, False)
     textObj = FONT.render(text, 0, pygame.Color("red"))
@@ -843,8 +909,19 @@ def drawEndGameText(text, screen):
     screen.blit(textObj, textLoc)
 
 if __name__ == "__main__":
-    main()
-    sleep(6)
+    while True:
+        choosePlayer()
+        main()
+        if MANUAL_QUIT:
+            pygame.quit()
+            break
+        else:
+            playAgain(RESULT)
+            if restartGame:
+                restartGame = False
+            else:
+                pygame.quit()
+                break
         
 
 """
