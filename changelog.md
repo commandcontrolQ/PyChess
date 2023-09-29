@@ -1,6 +1,6 @@
 # Changelog
 
-## Build 929 (29th September 2023)
+## Release 929 (29th September 2023)
 - Implemented sound effects (using pygame.mixer.Sound)
 - Fixed an issue where the 'X' button would not close the program.
 - Implemented the option to play again after a game ends.
