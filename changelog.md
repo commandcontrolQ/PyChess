@@ -1,5 +1,13 @@
 # Changelog
 
+## Build 929 (29th September 2023)
+- Implemented sound effects (using pygame.mixer.Sound)
+- Fixed an issue where the 'X' button would not close the program.
+- Implemented the option to play again after a game ends.
+  - The method `drawText()` has been deprecated and will likely be removed in a future build
+- Implemented draw by 50-move rule.
+- **I am planning to embed a copy of Stockfish 16 for evaluation (and maybe for opponent) purposes. In order to do this, I will have to import a 'stockfish' module. This will be done in the next build.**
+
 ## Build 919.1 (19th September 2023)
 - Added the ability to choose to play white, black, both or to let the AI play itself.
   - *In the next build, I am looking to add the ability to play again after a game is finished.*
