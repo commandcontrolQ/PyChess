@@ -7,6 +7,9 @@
 
 Chess program in Python (including an AI opponent)
 
+![Image of PyChess](./preview/image.png)
+
+
 To download this to your computer, there are two methods:
 > People with `git` installed can use `git clone https://github.com/commandcontrolQ/pychess-tf`.
 > 
