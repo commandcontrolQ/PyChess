@@ -1,8 +1,9 @@
 # PyChess - Chess implementation in Python
 
-> I am taking a break from updating this project.
-> 
-> I will probably release a new build sometime after 2023.
+> The codebase is pretty bad, and could do with a rewrite.
+>
+> When I end up doing a rewrite is unclear however
+> it'll probably be in a few years
 
 
 Chess program in Python (including an AI opponent)
